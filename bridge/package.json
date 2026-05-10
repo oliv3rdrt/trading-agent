@@ -1,0 +1,14 @@
+{
+  "name": "trading-agent-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Routing layer + runbook for TV chart → broker MCP execution",
+  "bin": {
+    "trading-bridge": "src/cli.js"
+  },
+  "scripts": {
+    "route": "node src/cli.js route",
+    "test": "node --test tests/*.test.js"
+  }
+}
