@@ -31,7 +31,7 @@ TradingView MCP (analysis layer — read chart, draw setups, compute levels)
 | 0 | Scaffold (this commit) | _root_         | ✅      |
 | 1 | Kraken MCP (paper)     | `kraken-mcp/`  | ✅      |
 | 2a | Forex MCP via cTrader (paper) | `forex-mcp/` | ✅    |
-| 3 | TV→broker bridge       | `bridge/`      | 🔲      |
+| 3 | TV→broker bridge       | `bridge/`      | ✅      |
 | 4 | Safety rails           | `shared/`      | 🔲      |
 
 ## Folders
