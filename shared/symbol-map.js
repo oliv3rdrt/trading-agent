@@ -62,6 +62,30 @@ export function mapToKraken(tvTicker) {
 }
 
 /**
+ * Map a TradingView ticker to a cTrader symbol name.
+ * cTrader uses bare pair names ("XAUUSD", "EURUSD") so we just strip the
+ * exchange prefix.
+ *
+ * Returns null for crypto/macro tickers — those route to kraken-mcp, not forex.
+ *
+ * Examples:
+ *   "ICMARKETS:XAUUSD"  → "XAUUSD"
+ *   "OANDA:EURUSD"      → "EURUSD"
+ *   "FX:GBPUSD"         → "GBPUSD"
+ *   "BINANCE:BTCUSDT"   → null (crypto, route to Kraken instead)
+ *   "CRYPTOCAP:TOTAL"   → null (macro, not tradeable)
+ */
+export function mapToCTrader(tvTicker) {
+  const exchange = tvTicker.split(':')[0];
+  // cTrader handles forex/CFD/metals/indices, not crypto exchanges or macro indices.
+  if (exchange === 'BINANCE' || exchange === 'COINBASE' || exchange === 'KRAKEN' ||
+      exchange === 'BYBIT' || exchange === 'CRYPTOCAP') {
+    return null;
+  }
+  return stripExchange(tvTicker);
+}
+
+/**
  * Reverse: a Kraken symbol → human-readable display.
  *   "XBTUSDT" → "BTC/USDT"
  */
