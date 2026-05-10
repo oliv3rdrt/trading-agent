@@ -1,0 +1,21 @@
+{
+  "name": "forex-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for forex/CFD execution via cTrader Open API",
+  "type": "module",
+  "main": "src/server.js",
+  "bin": {
+    "forex-mcp": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "auth": "node src/auth.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "ctrader-ts": "^1.0.1",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.0"
+  }
+}

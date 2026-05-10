@@ -1,0 +1,8 @@
+{
+  "name": "trading-agent-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Library code reused by kraken-mcp and forex-mcp",
+  "main": "rules-loader.js"
+}
