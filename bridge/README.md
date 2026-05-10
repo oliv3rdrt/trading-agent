@@ -4,7 +4,53 @@ Glue layer that turns TradingView signals into broker orders.
 
 ## Status
 
-🔲 Phase 3 — implemented after Kraken MCP (Phase 1) and Forex MCP (Phase 2) are working.
+✅ Phase 3 complete. The bridge is **a routing function + a procedural runbook**,
+not another MCP. Claude orchestrates the flow by following `RUNBOOK.md` and
+calling the existing kraken-mcp and forex-mcp tools directly.
+
+## Setup — register all three MCPs with Claude Code
+
+Add to `~/.claude/.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "tradingview": {
+      "command": "node",
+      "args": ["/Users/<you>/tradingview-mcp/src/server.js"]
+    },
+    "kraken": {
+      "command": "node",
+      "args": ["/Users/<you>/trading-agent/kraken-mcp/src/server.js"],
+      "env": { "PAPER_TRADING": "1" }
+    },
+    "forex": {
+      "command": "node",
+      "args": ["/Users/<you>/trading-agent/forex-mcp/src/server.js"],
+      "env": { "PAPER_TRADING": "1" }
+    }
+  }
+}
+```
+
+Restart Claude Code. All three MCPs load.
+
+## Usage
+
+When the user asks Claude to **"execute the long/short setup on the chart"**,
+Claude follows [`RUNBOOK.md`](./RUNBOOK.md): reads chart state from
+tradingview-mcp, identifies the symbol, calls `routeSymbol()` to pick the
+right broker, validates against `rules.json`, presents the trade summary,
+waits for "yes", then submits via the appropriate broker MCP.
+
+## Tests
+
+```bash
+node --test bridge/tests/route.test.js   # 8 tests, all symbol-routing edges
+node bridge/src/cli.js route BINANCE:BTCUSDT
+node bridge/src/cli.js route ICMARKETS:XAUUSD
+node bridge/src/cli.js route CRYPTOCAP:TOTAL    # returns null (analysis-only)
+```
 
 ## What it does
 
