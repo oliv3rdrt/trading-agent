@@ -1,0 +1,34 @@
+# Secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+credentials/
+secrets/
+
+# Logs (contains real prices, may reveal positions)
+audit-log.jsonl
+trade-log.jsonl
+*.log
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Misc
+coverage/
+.nyc_output/
+.cache/
