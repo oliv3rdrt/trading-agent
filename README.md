@@ -32,6 +32,7 @@ TradingView MCP (analysis layer — read chart, draw setups, compute levels)
 | 1 | Kraken MCP (paper)     | `kraken-mcp/`  | ✅      |
 | 2a | Forex MCP via cTrader (paper) | `forex-mcp/` | ✅    |
 | 3 | TV→broker bridge       | `bridge/`      | ✅      |
+| 4 | Safety rails           | `shared/`, `bridge/` | ✅ |
 | 4 | Safety rails           | `shared/`      | 🔲      |
 
 ## Folders
@@ -68,12 +69,19 @@ Register each MCP with Claude Code by adding to `~/.claude/.mcp.json`
    Create broker API keys with the **smallest possible permission set**
    (Kraken: no "withdraw funds"; OANDA: read+trade only, no transfers).
 3. **`rules.json` is enforced, not advisory.** Every order Claude composes is
-   validated against the rules before submission. Min R:R, max risk %,
-   no-trade windows: hard refusals, not warnings.
+   validated against the rules before submission:
+   - `min_rr_ratio` — hard refusal if R:R to first TP is below threshold
+   - `max_risk_per_trade` — caps per-order risk as % of balance
+   - `max_daily_risk` — refuses new orders if today's cumulative risk
+     would push past this fraction of balance
+   - `max_open_orders` — refuses if N orders already placed today
+   - `confirm_above_notional_usd` — large orders require explicit
+     `confirmed: true` flag (two-step interaction for big size)
 4. **Audit log.** Every order (paper or live) is appended to
    `audit-log.jsonl` (gitignored) with timestamp, prices, computed R:R, and
-   the chart-state snapshot that justified it.
-5. **No autonomous trading at first.** Phase 1–3 require explicit human
+   the reasoning that justified it. Inspect via
+   `node bridge/src/audit.js {summary, today, budget, tail, by-broker, by-symbol}`.
+5. **No autonomous trading at first.** Phase 1–4 require explicit human
    "execute" confirmation per trade. Autonomous mode (if ever added)
    is a separate phase with its own gates.
 
