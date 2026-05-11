@@ -37,6 +37,18 @@ export function loadRules(rulesPath) {
   if (raw.risk_rules.min_rr_ratio == null) throw new Error('rules.json: risk_rules.min_rr_ratio required');
 
   raw._max_risk_fraction = parseRiskPercent(raw.risk_rules.max_risk_per_trade);
+
+  // Phase 4 optional fields — present iff the user opts in via rules.json.
+  if (raw.risk_rules.max_daily_risk) {
+    raw._max_daily_risk_fraction = parseRiskPercent(raw.risk_rules.max_daily_risk);
+  }
+  if (typeof raw.risk_rules.confirm_above_notional_usd === 'number') {
+    raw._confirm_above_notional_usd = raw.risk_rules.confirm_above_notional_usd;
+  }
+  if (typeof raw.risk_rules.max_open_orders === 'number') {
+    raw._max_open_orders = raw.risk_rules.max_open_orders;
+  }
+
   return raw;
 }
 

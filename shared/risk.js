@@ -3,6 +3,8 @@
 // All risk gates live here so both MCPs use the same rules and so the logic
 // is unit-testable in one place.
 
+import { checkDailyBudget, todaysOrderCount } from './daily-risk.js';
+
 /**
  * @typedef {Object} OrderProposal
  * @property {"long" | "short"} side
@@ -29,17 +31,19 @@
  *  - stop is on the wrong side of entry
  *  - first TP is on the wrong side of entry
  *  - R:R to first TP < rules.risk_rules.min_rr_ratio
- *  - any no-trade window is currently active (weekend check only for now)
+ *  - daily risk cap would be breached (when max_daily_risk is set)
+ *  - too many open orders today (when max_open_orders is set)
+ *  - notional exceeds confirm_above_notional_usd AND proposal.confirmed !== true
  *
  * Returns sizing info on success.
  *
- * @param {OrderProposal} proposal
+ * @param {OrderProposal & { confirmed?: boolean }} proposal
  * @param {import('./rules-loader.js').TradingRules} rules
  * @returns {ValidationResult}
  */
 export function validateOrder(proposal, rules) {
   const violations = [];
-  const { side, entry, stop, take_profits, balance } = proposal;
+  const { side, entry, stop, take_profits, balance, confirmed } = proposal;
 
   // Side / stop / TP consistency
   if (side === 'long') {
@@ -76,11 +80,46 @@ export function validateOrder(proposal, rules) {
     }
   }
 
-  if (violations.length > 0) return { ok: false, violations };
-
-  // Compute size: risk / (entry - stop)
+  // Compute size + notional BEFORE the remaining gates so they can reference it.
   const maxRiskAmount = balance * rules._max_risk_fraction;
-  const size = maxRiskAmount / risk;
+  const size = risk === 0 ? 0 : maxRiskAmount / risk;
+  const notional = size * entry;
+
+  // Phase 4 — daily risk budget cap
+  if (rules._max_daily_risk_fraction != null) {
+    const daily = checkDailyBudget({
+      proposedRisk: maxRiskAmount,
+      balance,
+      maxDailyFrac: rules._max_daily_risk_fraction,
+    });
+    if (!daily.ok) {
+      violations.push(
+        `Daily risk cap exceeded: $${daily.taken.toFixed(2)} already at risk today + $${maxRiskAmount.toFixed(2)} ` +
+        `would push to $${daily.would_take.toFixed(2)} (cap = $${daily.cap.toFixed(2)}, ` +
+        `${(rules._max_daily_risk_fraction * 100).toFixed(1)}% of balance)`
+      );
+    }
+  }
+
+  // Phase 4 — max open orders today
+  if (rules._max_open_orders != null) {
+    const count = todaysOrderCount();
+    if (count >= rules._max_open_orders) {
+      violations.push(
+        `Daily order count cap reached: ${count} orders placed today (max ${rules._max_open_orders})`
+      );
+    }
+  }
+
+  // Phase 4 — notional confirmation gate
+  if (rules._confirm_above_notional_usd != null && notional > rules._confirm_above_notional_usd && !confirmed) {
+    violations.push(
+      `Notional $${notional.toFixed(2)} exceeds confirm_above_notional_usd ` +
+      `($${rules._confirm_above_notional_usd}). Re-call with confirmed: true to authorize.`
+    );
+  }
+
+  if (violations.length > 0) return { ok: false, violations };
 
   return {
     ok: true,
@@ -89,6 +128,7 @@ export function validateOrder(proposal, rules) {
       size,
       risk_amount: maxRiskAmount,
       rr_to_tp1: rr,
+      notional,
     },
   };
 }

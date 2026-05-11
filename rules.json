@@ -13,7 +13,10 @@
   "risk_rules": {
     "max_risk_per_trade": "1% of portfolio",
     "min_rr_ratio": 2,
-    "no_trades_during": ["major US CPI", "FOMC", "weekend thin liquidity"]
+    "no_trades_during": ["major US CPI", "FOMC", "weekend thin liquidity"],
+    "max_daily_risk": "3% of portfolio",
+    "confirm_above_notional_usd": 5000,
+    "max_open_orders": 5
   },
   "indicators_i_care_about": ["RSI (14)", "MACD (12, 26, 9)", "50 EMA", "200 EMA", "Volume"]
 }

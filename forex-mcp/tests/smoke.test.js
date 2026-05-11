@@ -32,14 +32,15 @@ test('symbol-map: forex tickers route to null for Kraken', () => {
   assert.equal(mapToKraken('ICMARKETS:XAUUSD'), null);
 });
 
-test('risk: forex bracket order with valid R:R (XAUUSD)', () => {
+test('risk: forex bracket order with valid R:R (XAUUSD) — small notional', () => {
   const rules = loadRules(path.resolve('../rules.json'));
+  // $1000 balance keeps notional under $5k confirm threshold.
   const result = validateOrder({
     side: 'long',
     entry: 4700,    // XAUUSD-style price
     stop: 4675,
     take_profits: [4764, 4857],   // R:R 2.56 to TP1
-    balance: 10_000,
+    balance: 1_000,
   }, rules);
   assert.ok(result.ok, `Expected ok, got: ${(result.violations || []).join(', ')}`);
   assert.ok(result.computed.rr_to_tp1 >= 2);

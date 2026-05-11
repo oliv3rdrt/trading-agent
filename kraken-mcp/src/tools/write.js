@@ -72,17 +72,18 @@ export function registerWriteTools(tools, kraken, { paper }) {
           minItems: 1,
         },
         reasoning: { type: 'string', description: 'Why this trade — captured in audit log' },
+        confirmed: { type: 'boolean', description: 'Set to true to authorize orders whose notional exceeds confirm_above_notional_usd' },
       },
       required: ['symbol', 'side', 'entry', 'stop', 'take_profits'],
     },
-    handler: async ({ symbol, side, entry, stop, take_profits, reasoning }) => {
+    handler: async ({ symbol, side, entry, stop, take_profits, reasoning, confirmed }) => {
       const { kraken_symbol, tv_symbol } = resolveSymbol(symbol);
       const rules = loadRules();
       const balance = paper && !process.env.KRAKEN_API_KEY
         ? 10_000 // paper mode without API keys: assume a $10k account for sizing demo
         : await quoteBalance(kraken, kraken_symbol);
 
-      const validation = validateOrder({ side, entry, stop, take_profits, balance }, rules);
+      const validation = validateOrder({ side, entry, stop, take_profits, balance, confirmed }, rules);
       if (!validation.ok) {
         return { success: false, refused: true, violations: validation.violations };
       }
