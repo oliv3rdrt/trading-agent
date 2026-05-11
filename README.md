@@ -33,6 +33,7 @@ TradingView MCP (analysis layer — read chart, draw setups, compute levels)
 | 2a | Forex MCP via cTrader (paper) | `forex-mcp/` | ✅    |
 | 3 | TV→broker bridge       | `bridge/`      | ✅      |
 | 4 | Safety rails           | `shared/`, `bridge/` | ✅ |
+| 5 | Dashboard              | `bridge/src/dashboard.*` | ✅ |
 | 4 | Safety rails           | `shared/`      | 🔲      |
 
 ## Folders

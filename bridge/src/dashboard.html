@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>trading-agent</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14181d;
+    --panel2: #1a1f25;
+    --border: #2a2f37;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --amber: #d29922;
+    --blue: #58a6ff;
+    --accent: #c9d1d9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: -apple-system, "SF Pro", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    font-size: 14px; line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; letter-spacing: -0.02em; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+  .header .meta { color: var(--muted); font-size: 12px; }
+  .grid { display: grid; gap: 16px; }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 800px) {
+    .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 4px; }
+  .stat .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat .value.mono { font-family: "SF Mono", Menlo, monospace; }
+  .stat .sub { color: var(--muted); font-size: 12px; }
+
+  /* Progress bar for risk budget */
+  .bar-wrap { background: var(--panel2); border-radius: 4px; height: 8px; overflow: hidden; margin-top: 12px; }
+  .bar { height: 100%; transition: width 0.4s ease; }
+  .bar.green { background: var(--green); }
+  .bar.amber { background: var(--amber); }
+  .bar.red { background: var(--red); }
+  .bar-meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* Orders table */
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  th { color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+  tbody tr:hover { background: var(--panel2); }
+  td.mono { font-family: "SF Mono", Menlo, monospace; }
+  td.right { text-align: right; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; }
+  .badge.paper { background: rgba(88, 166, 255, 0.12); color: var(--blue); }
+  .badge.live { background: rgba(248, 81, 73, 0.15); color: var(--red); }
+  .badge.long { background: rgba(63, 185, 80, 0.12); color: var(--green); }
+  .badge.short { background: rgba(248, 81, 73, 0.12); color: var(--red); }
+
+  /* Small group stats list */
+  .group-list { display: flex; flex-direction: column; gap: 8px; }
+  .group-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .group-row:last-child { border-bottom: 0; }
+  .group-row .name { font-family: "SF Mono", Menlo, monospace; font-size: 13px; }
+  .group-row .stats { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  .empty { color: var(--muted); font-style: italic; font-size: 13px; padding: 8px 0; }
+  footer { color: var(--muted); font-size: 11px; text-align: center; margin-top: 32px; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 6px; vertical-align: middle; }
+  .dot.red { background: var(--red); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1><span class="dot" id="live-dot"></span>trading-agent</h1>
+      <div class="meta">Audit log dashboard · auto-refreshing every 5s</div>
+    </div>
+    <div class="meta">
+      <div>last refresh: <span id="last-refresh">—</span></div>
+      <div>balance assumed: $<span id="balance">—</span></div>
+    </div>
+  </div>
+
+  <!-- Top row: budget + today + totals -->
+  <div class="grid cols-3" style="margin-bottom: 16px;">
+    <div class="panel" id="budget-panel">
+      <h2>Daily risk budget</h2>
+      <div class="stat">
+        <span class="value mono"><span id="budget-taken">$0</span> <span class="sub">/ <span id="budget-cap">$0</span></span></span>
+        <span class="sub">Remaining: <span id="budget-remaining">$0</span> · <span id="budget-util">0%</span> used</span>
+      </div>
+      <div class="bar-wrap"><div class="bar" id="budget-bar" style="width: 0%"></div></div>
+      <div class="bar-meta">
+        <span>0%</span>
+        <span id="budget-cap-pct">3% cap</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Today</h2>
+      <div class="stat">
+        <span class="value mono" id="today-count">0</span>
+        <span class="sub">orders placed · cap: <span id="today-cap">—</span></span>
+      </div>
+      <div class="stat" style="margin-top: 14px;">
+        <span class="label">Risk taken today</span>
+        <span class="value mono" id="today-risk">$0.00</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>All time</h2>
+      <div class="stat">
+        <span class="value mono" id="total-orders">0</span>
+        <span class="sub">total orders</span>
+      </div>
+      <div class="stat" style="margin-top: 14px;">
+        <span class="label">Paper / Live</span>
+        <span class="value mono"><span id="total-paper">0</span> <span style="color: var(--muted); font-weight: 400;">/</span> <span id="total-live">0</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle row: by broker + by symbol -->
+  <div class="grid cols-2" style="margin-bottom: 16px;">
+    <div class="panel">
+      <h2>By broker</h2>
+      <div class="group-list" id="by-broker">
+        <div class="empty">No orders yet</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>By symbol</h2>
+      <div class="group-list" id="by-symbol">
+        <div class="empty">No orders yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent orders table -->
+  <div class="panel">
+    <h2>Recent orders (last 20)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Broker</th>
+          <th>Side</th>
+          <th>Symbol</th>
+          <th class="right">Entry</th>
+          <th class="right">Stop</th>
+          <th class="right">TPs</th>
+          <th class="right">Size</th>
+          <th class="right">Risk</th>
+          <th class="right">R:R</th>
+          <th>Mode</th>
+          <th>ID</th>
+        </tr>
+      </thead>
+      <tbody id="orders-tbody">
+        <tr><td colspan="12" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    trading-agent · paper-trading enforces <code>rules.json</code> · audit log:
+    <code id="log-path">—</code>
+  </footer>
+</div>
+
+<script>
+const fmtUSD = (n) => '$' + Number(n).toFixed(2);
+const fmtPct = (n) => (Number(n) * 100).toFixed(1) + '%';
+const fmt = (n, d = 2) => n == null ? '—' : Number(n).toFixed(d);
+
+function relativeTime(iso) {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const sec = Math.floor((now - then) / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  return `${Math.floor(sec / 86400)}d ago`;
+}
+
+async function refresh() {
+  try {
+    const res = await fetch('/api/data');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    render(d);
+    document.getElementById('live-dot').classList.remove('red');
+  } catch (err) {
+    document.getElementById('live-dot').classList.add('red');
+    console.error('refresh failed:', err);
+  }
+  document.getElementById('last-refresh').textContent = new Date().toLocaleTimeString();
+}
+
+function render(d) {
+  document.getElementById('balance').textContent = d.budget ? Number(d.budget.balance).toFixed(0) : '—';
+  document.getElementById('log-path').textContent = d.log_path;
+
+  // Budget
+  if (d.budget) {
+    const b = d.budget;
+    document.getElementById('budget-taken').textContent = fmtUSD(b.taken);
+    document.getElementById('budget-cap').textContent = fmtUSD(b.cap);
+    document.getElementById('budget-remaining').textContent = fmtUSD(b.remaining);
+    document.getElementById('budget-util').textContent = fmtPct(b.utilization);
+    document.getElementById('budget-cap-pct').textContent = fmtPct(b.cap_fraction) + ' cap';
+
+    const bar = document.getElementById('budget-bar');
+    const pct = Math.min(100, b.utilization * 100);
+    bar.style.width = pct + '%';
+    bar.classList.remove('green', 'amber', 'red');
+    if (pct < 60) bar.classList.add('green');
+    else if (pct < 90) bar.classList.add('amber');
+    else bar.classList.add('red');
+  } else {
+    document.getElementById('budget-panel').innerHTML = '<h2>Daily risk budget</h2><div class="empty">No <code>max_daily_risk</code> in rules.json.</div>';
+  }
+
+  // Today
+  document.getElementById('today-count').textContent = d.today_count;
+  document.getElementById('today-cap').textContent = d.max_open_orders ? `${d.today_count}/${d.max_open_orders}` : '—';
+  document.getElementById('today-risk').textContent = fmtUSD(d.today_risk_taken);
+
+  // All time
+  document.getElementById('total-orders').textContent = d.total;
+  document.getElementById('total-paper').textContent = d.paper;
+  document.getElementById('total-live').textContent = d.live;
+
+  // By broker
+  const brokerEl = document.getElementById('by-broker');
+  const brokerEntries = Object.entries(d.by_broker).sort((a, b) => b[1].count - a[1].count);
+  if (brokerEntries.length === 0) {
+    brokerEl.innerHTML = '<div class="empty">No orders yet</div>';
+  } else {
+    brokerEl.innerHTML = brokerEntries.map(([k, v]) => `
+      <div class="group-row">
+        <span class="name">${k}</span>
+        <span class="stats">${v.count} orders · ${fmtUSD(v.risk)} risk</span>
+      </div>`).join('');
+  }
+
+  // By symbol
+  const symbolEl = document.getElementById('by-symbol');
+  const symbolEntries = Object.entries(d.by_symbol).sort((a, b) => b[1].count - a[1].count);
+  if (symbolEntries.length === 0) {
+    symbolEl.innerHTML = '<div class="empty">No orders yet</div>';
+  } else {
+    symbolEl.innerHTML = symbolEntries.map(([k, v]) => `
+      <div class="group-row">
+        <span class="name">${k}</span>
+        <span class="stats">${v.count} orders · ${fmtUSD(v.risk)} risk</span>
+      </div>`).join('');
+  }
+
+  // Recent orders
+  const tbody = document.getElementById('orders-tbody');
+  if (!d.recent || d.recent.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" class="empty">No orders yet — place one to see it here.</td></tr>';
+  } else {
+    tbody.innerHTML = d.recent.map(e => {
+      const tps = (e.take_profits || []).map(n => Number(n).toFixed(2)).join(' / ');
+      const sideClass = e.side === 'long' ? 'long' : e.side === 'short' ? 'short' : '';
+      return `<tr>
+        <td>${relativeTime(e.ts)}</td>
+        <td class="mono">${e.broker || '—'}</td>
+        <td><span class="badge ${sideClass}">${(e.side || '—').toUpperCase()}</span></td>
+        <td class="mono">${e.symbol || '—'}</td>
+        <td class="right mono">${fmt(e.entry)}</td>
+        <td class="right mono">${fmt(e.stop)}</td>
+        <td class="right mono">${tps || '—'}</td>
+        <td class="right mono">${fmt(e.size, 4)}</td>
+        <td class="right mono">${fmtUSD(e.risk_amount || 0)}</td>
+        <td class="right mono">${fmt(e.rr_to_tp1)}</td>
+        <td><span class="badge ${e.paper ? 'paper' : 'live'}">${e.paper ? 'PAPER' : 'LIVE'}</span></td>
+        <td class="mono" style="color: var(--muted); font-size: 11px;">${e.broker_order_id || '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

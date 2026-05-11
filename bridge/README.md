@@ -46,11 +46,31 @@ waits for "yes", then submits via the appropriate broker MCP.
 ## Tests
 
 ```bash
-node --test bridge/tests/route.test.js   # 8 tests, all symbol-routing edges
+node --test bridge/tests/route.test.js       # 8 tests, all symbol-routing edges
+node --test bridge/tests/dashboard.test.js   # 4 tests, dashboard API shape
 node bridge/src/cli.js route BINANCE:BTCUSDT
 node bridge/src/cli.js route ICMARKETS:XAUUSD
 node bridge/src/cli.js route CRYPTOCAP:TOTAL    # returns null (analysis-only)
 ```
+
+## Dashboard
+
+Local web dashboard for the trading-agent's audit log. No build step, no external
+deps — single Node HTTP server + one HTML file.
+
+```bash
+cd bridge
+npm run dashboard           # → http://localhost:8090
+```
+
+Shows: daily risk budget (gauge + utilization %), today's order count vs cap,
+paper/live totals, breakdown by broker + symbol, table of last 20 orders.
+Auto-refreshes every 5s.
+
+Env overrides:
+- `DASHBOARD_PORT` (default 8090)
+- `DASHBOARD_BALANCE` (default 10000 — used to compute the daily risk cap %)
+- `AUDIT_LOG_PATH` (default `~/trading-agent/audit-log.jsonl`)
 
 ## What it does
 
