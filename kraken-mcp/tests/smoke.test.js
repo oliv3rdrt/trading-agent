@@ -33,16 +33,29 @@ test('rules-loader: loads and parses risk %', () => {
   assert.equal(rules.risk_rules.min_rr_ratio, 2);
 });
 
-test('risk.validateOrder: accepts a clean R:R 2.5 long', () => {
+test('risk.validateOrder: accepts a clean R:R 2.5 long (small notional)', () => {
   const rules = loadRules(path.resolve('../rules.json'));
+  // Use balance that keeps notional under confirm_above_notional_usd (5000)
+  // so the order passes without confirmed flag.
   const result = validateOrder({
     side: 'long',
     entry: 81000, stop: 80000, take_profits: [83500],  // 2500/1000 = 2.5
-    balance: 10_000,
+    balance: 6_000,
   }, rules);
   assert.ok(result.ok, `Expected ok, got violations: ${(result.violations || []).join(', ')}`);
   assert.ok(result.computed.rr_to_tp1 >= 2);
   assert.ok(result.computed.size > 0);
+});
+
+test('risk.validateOrder: accepts oversized notional with confirmed flag', () => {
+  const rules = loadRules(path.resolve('../rules.json'));
+  const result = validateOrder({
+    side: 'long',
+    entry: 81000, stop: 80000, take_profits: [83500],
+    balance: 100_000,
+    confirmed: true,
+  }, rules);
+  assert.ok(result.ok, `Expected ok with confirmed=true, got: ${(result.violations || []).join(', ')}`);
 });
 
 test('risk.validateOrder: rejects R:R below min', () => {

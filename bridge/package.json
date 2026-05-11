@@ -9,6 +9,7 @@
   },
   "scripts": {
     "route": "node src/cli.js route",
+    "audit": "node src/audit.js",
     "test": "node --test tests/*.test.js"
   }
 }

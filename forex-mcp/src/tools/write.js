@@ -54,15 +54,16 @@ export function registerWriteTools(tools, { paper }) {
         stop: { type: 'number' },
         take_profits: { type: 'array', items: { type: 'number' }, minItems: 1 },
         reasoning: { type: 'string' },
+        confirmed: { type: 'boolean', description: 'Set true to authorize orders whose notional exceeds confirm_above_notional_usd' },
       },
       required: ['symbol', 'side', 'entry', 'stop', 'take_profits'],
     },
-    handler: async ({ symbol, side, entry, stop, take_profits, reasoning }) => {
+    handler: async ({ symbol, side, entry, stop, take_profits, reasoning, confirmed }) => {
       const { ctrader_symbol, tv_symbol } = resolveSymbol(symbol);
       const rules = loadRules();
       const balance = await accountBalance();
 
-      const validation = validateOrder({ side, entry, stop, take_profits, balance }, rules);
+      const validation = validateOrder({ side, entry, stop, take_profits, balance, confirmed }, rules);
       if (!validation.ok) {
         return { success: false, refused: true, violations: validation.violations };
       }
